@@ -40,7 +40,6 @@ class GenerateResponse(BaseModel):
 def health_check():
     return {"status": "ok", "message": "Digital Content AI running"}
 
-
 @app.post("/api/generate", response_model=GenerateResponse)
 def generate(request: GenerateRequest):
     try:
