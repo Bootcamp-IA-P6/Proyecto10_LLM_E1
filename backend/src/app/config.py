@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
 
     class Config:
-        env_file = "backend/.env"
+        env_file = ".env"
 
 
 settings = Settings()

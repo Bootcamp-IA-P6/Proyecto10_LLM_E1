@@ -1,4 +1,4 @@
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 blog_prompt = ChatPromptTemplate.from_messages([
     ("system", """Eres un experto redactor de contenido para blogs.
