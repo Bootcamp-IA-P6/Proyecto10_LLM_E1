@@ -30,7 +30,7 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
                 <select
                 value={platform}
                 onChange={e => setPlatform(e.target.value as Platform)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
                 >
                 <option value="blog">Blog</option>
                 <option value="twitter">Twitter / X</option>
@@ -47,7 +47,7 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
                 value={topic}
                 onChange={e => setTopic(e.target.value)}
                 placeholder="ej: inteligencia artificial en educación"
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
                 />
             </div>
 
@@ -59,7 +59,7 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
                 value={audience}
                 onChange={e => setAudience(e.target.value)}
                 placeholder="ej: profesores de secundaria"
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
                 />
             </div>
 
@@ -71,7 +71,7 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
                 value={tone}
                 onChange={e => setTone(e.target.value)}
                 placeholder="ej: profesional, informal, divulgativo"
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
                 />
             </div>
 
@@ -81,7 +81,7 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
                 <select
                 value={language}
                 onChange={e => setLanguage(e.target.value as Language)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
                 >
                 <option value="es">Español</option>
                 <option value="en">English</option>
