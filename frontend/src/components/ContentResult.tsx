@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+import ReactMarkdown from "react-markdown"
 import { GenerateResponse } from "@/types/content"
 
 interface ContentResultProps {
@@ -14,7 +16,10 @@ const PLATFORM_LABELS: Record<string, string> = {
     instagram: "Instagram",
 }
 
+type Tab = "raw" | "preview"
+
 export default function ContentResult({ result, isLoading }: ContentResultProps) {
+    const [activeTab, setActiveTab] = useState<Tab>("raw")
 
     // Estado: cargando
     if (isLoading) {
@@ -55,10 +60,66 @@ export default function ContentResult({ result, isLoading }: ContentResultProps)
                 </span>
             </div>
 
-            {/* Contenido generado */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-emerald-50 whitespace-pre-wrap leading-relaxed">
-                {result.content}
+            {/* Pestañas */}
+            <div className="flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1 w-fit">
+                <button
+                    onClick={() => setActiveTab("raw")}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        activeTab === "raw"
+                            ? "bg-emerald-500 text-white shadow-sm"
+                            : "text-white/40 hover:text-white/70"
+                    }`}
+                >
+                    Raw
+                </button>
+                <button
+                    onClick={() => setActiveTab("preview")}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        activeTab === "preview"
+                            ? "bg-emerald-500 text-white shadow-sm"
+                            : "text-white/40 hover:text-white/70"
+                    }`}
+                >
+                    Preview
+                </button>
             </div>
+
+            {/* Contenido — Raw */}
+            {activeTab === "raw" && (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-emerald-50 whitespace-pre-wrap leading-relaxed">
+                    {result.content}
+                </div>
+            )}
+
+            {/* Contenido — Preview Markdown */}
+            {activeTab === "preview" && (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-emerald-50 leading-relaxed prose prose-invert prose-emerald max-w-none
+                    prose-headings:text-emerald-300
+                    prose-headings:font-bold
+                    prose-h1:text-xl
+                    prose-h2:text-lg
+                    prose-h3:text-base
+                    prose-p:text-emerald-50
+                    prose-p:leading-relaxed
+                    prose-strong:text-emerald-300
+                    prose-em:text-emerald-200
+                    prose-li:text-emerald-50
+                    prose-a:text-teal-400
+                    prose-a:no-underline
+                    prose-a:hover:text-teal-300
+                    prose-code:text-emerald-300
+                    prose-code:bg-white/10
+                    prose-code:px-1
+                    prose-code:rounded
+                    prose-blockquote:border-emerald-500
+                    prose-blockquote:text-emerald-200
+                    prose-hr:border-white/10
+                ">
+                    <ReactMarkdown>
+                        {result.content}
+                    </ReactMarkdown>
+                </div>
+            )}
 
             {/* Botón copiar */}
             <button
