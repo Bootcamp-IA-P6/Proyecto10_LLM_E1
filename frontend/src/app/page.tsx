@@ -15,7 +15,6 @@ export default function Home() {
     setIsLoading(true)
     setError(null)
     setResult(null)
-
     try {
       const data = await generateContent(req)
       setResult(data)
@@ -27,37 +26,63 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white flex flex-col items-center px-4 py-12 gap-10">
+    <main className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-900 to-green-900 flex flex-col items-center px-4 py-12 gap-10">
+
+      {/* Orbes decorativos de fondo */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500 rounded-full opacity-10 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-400 rounded-full opacity-10 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-green-400 rounded-full opacity-5 blur-3xl" />
+      </div>
 
       {/* Cabecera */}
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Digital Content AI
+      <div className="relative flex flex-col items-center gap-3 text-center">
+        <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-400/30 rounded-full px-4 py-1">
+          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="text-emerald-300 text-xs font-medium tracking-wide uppercase">
+            IA Generativa · Groq LLM
+          </span>
+        </div>
+
+        <h1 className="text-5xl font-extrabold tracking-tight">
+          <span className="text-white">Digital</span>
+          {" "}
+          <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+            Content AI
+          </span>
         </h1>
-        <p className="text-sm text-gray-500 max-w-md">
+
+        <p className="text-sm text-emerald-100/60 max-w-md leading-relaxed">
           Genera contenido listo para publicar en cualquier plataforma
           usando inteligencia artificial
         </p>
       </div>
 
-      {/* Formulario */}
-      <GenerateForm
-        onSubmit={handleGenerate}
-        isLoading={isLoading}
-      />
+      {/* Tarjeta principal */}
+      <div className="relative w-full max-w-xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/30">
+        {/* Borde superior decorativo */}
+        <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
+
+        <GenerateForm
+          onSubmit={handleGenerate}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* Error */}
       {error && (
-        <div className="w-full max-w-xl bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="w-full max-w-xl bg-red-500/10 border border-red-400/30 rounded-xl px-4 py-3 backdrop-blur-sm">
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
       {/* Resultado */}
-      <ContentResult
-        result={result}
-        isLoading={isLoading}
-      />
+      <div className="w-full max-w-xl">
+        <ContentResult
+          result={result}
+          isLoading={isLoading}
+        />
+      </div>
 
     </main>
   )
