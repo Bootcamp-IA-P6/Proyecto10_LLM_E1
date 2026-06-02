@@ -19,10 +19,11 @@ def generate_content(
     audience: str,
     tone: str,
     language: str,
+    model: str = "groq",
     company_profile: str = "",
 ) -> str:
     """
-    Genera contenido para la plataforma indicada usando LangChain.
+    Genera contenido para la plataforma indicada usando el LLM seleccionado.
     """
     if platform not in PROMPTS:
         raise ValueError(f"Plataforma no soportada: {platform}")
@@ -31,7 +32,7 @@ def generate_content(
         f"Perfil de empresa: {company_profile}" if company_profile else ""
     )
 
-    llm = get_llm()
+    llm = get_llm(model)
     prompt = PROMPTS[platform]
     chain = prompt | llm
 
@@ -43,4 +44,7 @@ def generate_content(
         "company_context": company_context,
     })
 
-    return response.content
+    # OllamaLLM devuelve string, ChatGroq devuelve AIMessage
+    if hasattr(response, "content"):
+        return response.content
+    return response
