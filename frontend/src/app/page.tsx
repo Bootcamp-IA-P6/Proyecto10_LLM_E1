@@ -1,15 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import GenerateForm from "@/components/GenerateForm"
 import ContentResult from "@/components/ContentResult"
-import { generateContent } from "@/services/api"
-import { GenerateRequest, GenerateResponse } from "@/types/content"
+import ProfileForm from "@/components/ProfileForm"
+import { generateContent, getProfile } from "@/services/api"
+import { GenerateRequest, GenerateResponse, CompanyProfile } from "@/types/content"
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult]       = useState<GenerateResponse | null>(null)
-  const [error, setError]         = useState<string | null>(null)
+  const [isLoading, setIsLoading]         = useState(false)
+  const [result, setResult]               = useState<GenerateResponse | null>(null)
+  const [error, setError]                 = useState<string | null>(null)
+  const [showProfile, setShowProfile]     = useState(false)
+  const [activeProfile, setActiveProfile] = useState<CompanyProfile | null>(null)
+
+  // Cargar perfil existente al montar la página
+  useEffect(() => {
+    async function loadProfile() {
+      const profile = await getProfile()
+      if (profile) setActiveProfile(profile)
+    }
+    loadProfile()
+  }, [])
 
   async function handleGenerate(req: GenerateRequest) {
     setIsLoading(true)
@@ -22,6 +34,15 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Error inesperado")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleProfileSaved() {
+    // Recargar el perfil activo tras guardar
+    const profile = await getProfile()
+    if (profile) {
+      setActiveProfile(profile)
+      setShowProfile(false)
     }
   }
 
@@ -40,7 +61,7 @@ export default function Home() {
         <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-400/30 rounded-full px-4 py-1">
           <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
           <span className="text-emerald-300 text-xs font-medium tracking-wide uppercase">
-            IA Generativa · Groq LLM
+            IA Generativa · Groq + Ollama
           </span>
         </div>
 
@@ -58,11 +79,50 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Tarjeta principal */}
-      <div className="relative w-full max-w-xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/30">
-        {/* Borde superior decorativo */}
-        <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
+      {/* Perfil de empresa */}
+      <div className="relative w-full max-w-xl flex flex-col gap-3">
+        <button
+          onClick={() => setShowProfile(prev => !prev)}
+          className="flex items-center justify-between w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-emerald-200 hover:bg-white/10 transition-all"
+        >
+          <div className="flex items-center gap-2">
+            <span>🏢</span>
+            <span className="font-medium">
+              {activeProfile
+                ? `Perfil activo: ${activeProfile.name}`
+                : "Configurar perfil de empresa"
+              }
+            </span>
+          </div>
+          <span className="text-white/40 text-xs">
+            {showProfile ? "▲ Cerrar" : "▼ Abrir"}
+          </span>
+        </button>
 
+        {/* Badge perfil activo */}
+        {activeProfile && !showProfile && (
+          <div className="flex gap-2 flex-wrap px-1">
+            <span className="text-xs bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 px-2 py-1 rounded-full">
+              {activeProfile.sector}
+            </span>
+            <span className="text-xs bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 px-2 py-1 rounded-full">
+              Tono: {activeProfile.tone}
+            </span>
+          </div>
+        )}
+
+        {/* Formulario de perfil colapsable */}
+        {showProfile && (
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
+            <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
+            <ProfileForm onSaved={handleProfileSaved} />
+          </div>
+        )}
+      </div>
+
+      {/* Tarjeta principal de generación */}
+      <div className="relative w-full max-w-xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/30">
+        <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
         <GenerateForm
           onSubmit={handleGenerate}
           isLoading={isLoading}
