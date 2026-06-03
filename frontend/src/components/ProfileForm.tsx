@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { CompanyProfile } from "@/types/content";
 import { saveProfile, getProfile } from "@/services/api";
 
-export default function ProfileForm() {
+interface ProfileFormProps {
+  onSaved?: () => void
+}
+
+export default function ProfileForm({ onSaved }: ProfileFormProps) {
   const [name, setName] = useState("");
   const [sector, setSector] = useState("");
   const [tone, setTone] = useState("");
@@ -13,7 +17,6 @@ export default function ProfileForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Al montar el componente recuperar el perfil guardado
   useEffect(() => {
     async function loadProfile() {
       const profile = await getProfile();
@@ -45,6 +48,7 @@ export default function ProfileForm() {
       await saveProfile(profile);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
+      if (onSaved) onSaved();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al guardar el perfil",
@@ -56,6 +60,7 @@ export default function ProfileForm() {
 
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-4 w-full">
+
       {/* Nombre empresa */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-emerald-200">
@@ -127,6 +132,7 @@ export default function ProfileForm() {
       >
         {isLoading ? "Guardando..." : "Guardar perfil"}
       </button>
+
     </form>
   );
 }
