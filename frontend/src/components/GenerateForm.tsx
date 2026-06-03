@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { GenerateRequest, Platform, Language } from "@/types/content"
+import { GenerateRequest, Platform, Language, Model } from "@/types/content"
 
 interface GenerateFormProps {
     onSubmit: (req: GenerateRequest) => void
@@ -14,11 +14,13 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
     const [audience, setAudience] = useState("")
     const [tone, setTone]         = useState("profesional")
     const [language, setLanguage] = useState<Language>("es")
+    const [model, setModel]       = useState<Model>("groq")
+
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!topic.trim() || !audience.trim()) return
-        onSubmit({ platform, topic, audience, tone, language })
+        onSubmit({ platform, topic, audience, tone, language, model })
     }
 
     return (
@@ -89,6 +91,27 @@ export default function GenerateForm({ onSubmit, isLoading }: GenerateFormProps)
                     <option className="bg-emerald-950 text-white" value="it">Italiano</option>
                 </select>
             </div>
+
+            {/* Modelo LLM */}
+            <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-emerald-200">Modelo</label>
+                <select
+                    value={model}
+                    onChange={e => setModel(e.target.value as Model)}
+                    className="bg-emerald-950 border border-white/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 w-full"
+                    >
+                    <option className="bg-emerald-950 text-white" value="groq">GROQ (online, rápido)</option>
+                    <option className="bg-emerald-950 text-white" value="ollama">Ollama (local, sin límites)</option>
+                </select>
+
+                {/* Aviso Ollama */}
+                {model === "ollama" && (
+                    <p className="text-xs text-amber-400/80 mt-1">
+                        ⚠️ Ollama corre en local, puede tardar 30-60 segundos
+                    </p>
+                )}
+            </div>
+
 
             {/* Botón */}
             <button

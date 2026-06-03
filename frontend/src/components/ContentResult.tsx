@@ -50,6 +50,15 @@ export default function ContentResult({ result, isLoading }: ContentResultProps)
     return (
         <div className="w-full flex flex-col gap-3">
 
+            {/* Imagen de Unsplash */}
+            {result.image_url && (
+                <img
+                    src={result.image_url}
+                    alt={`Imagen para ${PLATFORM_LABELS[result.platform] ?? result.platform}`}
+                    className="w-full h-48 object-cover rounded-xl border border-white/10"
+                />
+            )}
+
             {/* Cabecera con metadatos */}
             <div className="flex items-center justify-between">
                 <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
