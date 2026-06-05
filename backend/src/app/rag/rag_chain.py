@@ -1,28 +1,44 @@
 from langchain_chroma import Chroma
-from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 from app.generators.llm_factory import get_llm
 
 
-def build_rag_chain(vector_store: Chroma) -> RetrievalQA:
+RAG_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", """Eres un divulgador científico experto.
+Usa el siguiente contexto de papers científicos para responder.
+Si el contexto no es suficiente, indícalo claramente.
+
+Contexto:
+{context}"""),
+    ("human", "{question}"),
+])
+
+
+def format_docs(docs) -> str:
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+def build_rag_chain(vector_store: Chroma):
     """
     Construye la cadena RAG con Ollama como LLM y Chroma como retriever.
     """
     llm = get_llm("ollama")
-    retriever = vector_store.as_retriever(
-        search_kwargs={"k": 3}
+    retriever = vector_store.as_retriever(search_kwargs={"k": 3})
+
+    chain = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | RAG_PROMPT
+        | llm
+        | StrOutputParser()
     )
 
-    return RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        return_source_documents=True,
-    )
+    return chain
 
 
-def run_rag_query(chain: RetrievalQA, query: str) -> str:
+def run_rag_query(chain, query: str) -> str:
     """
     Ejecuta una query sobre la cadena RAG y devuelve el resultado como string.
     """
-    result = chain.invoke({"query": query})
-    return result["result"]
+    return chain.invoke(query)
