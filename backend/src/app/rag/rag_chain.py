@@ -1,5 +1,5 @@
-from langchain.chains import RetrievalQA
 from langchain_chroma import Chroma
+from langchain.chains.retrieval_qa.base import RetrievalQA
 from app.generators.llm_factory import get_llm
 
 
