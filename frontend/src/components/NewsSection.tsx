@@ -66,7 +66,7 @@ export default function NewsSection({ onSubmit, isLoading }: NewsSectionProps) {
                 key={index}
                 className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 flex flex-col gap-0.5"
               >
-                <p className="text-xs font-medium text-emerald-100 line-clamp-1">
+                <p className="text-xs font-medium text-emerald-100 leading-relaxed">
                   {headline.title}
                 </p>
                 {headline.description && (
