@@ -2252,6 +2252,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "sentence-transformers" },
+    { name = "sqlalchemy" },
     { name = "uvicorn" },
 ]
 
@@ -2271,6 +2272,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "sentence-transformers", specifier = ">=5.5.1" },
+    { name = "sqlalchemy", specifier = ">=2.0.50" },
     { name = "uvicorn", specifier = ">=0.48.0" },
 ]
 
