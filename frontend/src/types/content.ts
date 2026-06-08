@@ -57,3 +57,17 @@ export interface NewsHeadline {
     description: string
     url: string
 }
+
+export interface GenerationRecord {
+    id: number
+    platform: string
+    topic: string
+    audience: string
+    tone: string | null
+    language: string | null
+    model_used: string
+    content: string
+    image_url: string | null
+    gen_type: "general" | "science" | "news"
+    created_at: string
+}
