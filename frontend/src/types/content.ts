@@ -44,7 +44,7 @@ export interface NewsRequest {
     audience: string
     tone?: string
     language?: Language
-    plataform?: Platform
+    platform?: Platform
 }
 
 export interface NewsResponse {
