@@ -8,6 +8,7 @@ import {
   NewsRequest,
   NewsResponse,
   NewsHeadline,
+  GenerationRecord
 } from "@/types/content"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -111,5 +112,29 @@ export async function getFinancialNews(
     return response.data.news
   } catch {
     return []
+  }
+}
+
+export async function getHistory(
+  limit: number = 20,
+  skip: number = 0
+): Promise<GenerationRecord[]> {
+  try {
+    const response = await apiClient.get<GenerationRecord[]>(
+      "/api/history",
+      { params: { limit, skip } }
+    )
+    return response.data
+  } catch {
+    return []
+  }
+}
+
+export async function deleteGenation(id: number): Promise<boolean> {
+  try {
+    await apiClient.delete(`/api/history/${id}`)
+    return true
+  } catch {
+    return false
   }
 }
