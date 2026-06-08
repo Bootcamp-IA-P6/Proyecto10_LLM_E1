@@ -6,6 +6,7 @@ import ContentResult from "@/components/ContentResult"
 import ProfileForm from "@/components/ProfileForm"
 import ScienceForm from "@/components/ScienceForm"
 import NewsSection from "@/components/NewsSection"
+import HistoryPanel from "@/components/HistoryPanel"
 import {
   generateContent,
   generateScience,
@@ -22,8 +23,7 @@ import {
   CompanyProfile,
 } from "@/types/content"
 
-type Tab = "general" | "science" | "news"
-
+type Tab    = "general" | "science" | "news"
 type Result = GenerateResponse | ScienceResponse | NewsResponse | null
 
 export default function Home() {
@@ -32,7 +32,9 @@ export default function Home() {
   const [result, setResult]               = useState<Result>(null)
   const [error, setError]                 = useState<string | null>(null)
   const [showProfile, setShowProfile]     = useState(false)
+  const [showHistory, setShowHistory]     = useState(false)
   const [activeProfile, setActiveProfile] = useState<CompanyProfile | null>(null)
+  const [historyKey, setHistoryKey]       = useState(0)
 
   useEffect(() => {
     async function loadProfile() {
@@ -42,7 +44,6 @@ export default function Home() {
     loadProfile()
   }, [])
 
-  // Cambiar de tab resetea el resultado
   function handleTabChange(tab: Tab) {
     setActiveTab(tab)
     setResult(null)
@@ -56,6 +57,7 @@ export default function Home() {
     try {
       const data = await generateContent(req)
       setResult(data)
+      setHistoryKey(prev => prev + 1) // fuerza recarga del historial
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado")
     } finally {
@@ -70,6 +72,7 @@ export default function Home() {
     try {
       const data = await generateScience(req)
       setResult(data)
+      setHistoryKey(prev => prev + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado")
     } finally {
@@ -84,6 +87,7 @@ export default function Home() {
     try {
       const data = await generateNews(req)
       setResult(data)
+      setHistoryKey(prev => prev + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado")
     } finally {
@@ -231,6 +235,29 @@ export default function Home() {
           result={result as GenerateResponse | null}
           isLoading={isLoading}
         />
+      </div>
+
+      {/* Historial */}
+      <div className="relative w-full max-w-xl flex flex-col gap-3">
+        <button
+          onClick={() => setShowHistory(prev => !prev)}
+          className="flex items-center justify-between w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-emerald-200 hover:bg-white/10 transition-all"
+        >
+          <div className="flex items-center gap-2">
+            <span>🕓</span>
+            <span className="font-medium">Historial de generaciones</span>
+          </div>
+          <span className="text-white/40 text-xs">
+            {showHistory ? "▲ Cerrar" : "▼ Abrir"}
+          </span>
+        </button>
+
+        {showHistory && (
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
+            <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
+            <HistoryPanel key={historyKey} />
+          </div>
+        )}
       </div>
 
     </main>
