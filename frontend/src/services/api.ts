@@ -130,7 +130,7 @@ export async function getHistory(
   }
 }
 
-export async function deleteGenation(id: number): Promise<boolean> {
+export async function deleteGeneration(id: number): Promise<boolean> {
   try {
     await apiClient.delete(`/api/history/${id}`)
     return true
