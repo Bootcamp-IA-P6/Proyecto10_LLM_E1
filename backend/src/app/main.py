@@ -1,24 +1,26 @@
-import os
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from sqlalchemy.orm import Session
 
 from app.generators.content_generator import generate_content
 from app.profile import CompanyProfile, save_profile, get_profile, get_profile_as_text
 from app.services.image_service import get_image
 from app.services.news_service import get_financial_news, format_news_as_context
+from app.services.history_service import save_generation, get_history, delete_generation
 from app.rag.arxiv_loader import load_papers
-from app.rag.vector_store import build_vector_store, load_vector_store
+from app.rag.vector_store import build_vector_store
 from app.rag.rag_chain import build_rag_chain, run_rag_query
+from app.database.database import init_db, get_db
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Digital Content AI",
     description="Generación automática de contenido con LLMs",
-    version="3.0.0",
+    version="3.1.0",
 )
 
 app.add_middleware(
@@ -28,6 +30,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Inicialización ────────────────────────────────────────────────
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
 
 # ── Modelos Pydantic ──────────────────────────────────────────────
@@ -54,7 +63,7 @@ class ScienceRequest(BaseModel):
     audience: str
     tone: str = "divulgativo"
     language: str = "es"
-    max_papers: int = 10
+    max_papers: int = 5
 
 
 class NewsRequest(BaseModel):
@@ -65,6 +74,35 @@ class NewsRequest(BaseModel):
     language: str = "es"
 
 
+class NewsHeadline(BaseModel):
+    title: str
+    description: str
+    url: str
+
+
+class FinancialNewsResponse(BaseModel):
+    topic: str
+    count: int
+    news: list[NewsHeadline]
+
+
+class GenerationResponse(BaseModel):
+    id: int
+    platform: str
+    topic: str
+    audience: str
+    tone: Optional[str]
+    language: Optional[str]
+    model_used: str
+    content: str
+    image_url: Optional[str]
+    gen_type: str
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
 # ── Endpoints ─────────────────────────────────────────────────────
 
 @app.get("/")
@@ -73,7 +111,7 @@ def health_check():
 
 
 @app.post("/api/generate", response_model=GenerateResponse)
-def generate(request: GenerateRequest):
+def generate(request: GenerateRequest, db: Session = Depends(get_db)):
     try:
         company_profile = request.company_profile or get_profile_as_text()
 
@@ -88,6 +126,19 @@ def generate(request: GenerateRequest):
         )
 
         image_url = get_image(request.topic)
+
+        save_generation(
+            db=db,
+            platform=request.platform,
+            topic=request.topic,
+            audience=request.audience,
+            content=content,
+            model_used=request.model,
+            tone=request.tone,
+            language=request.language,
+            image_url=image_url,
+            gen_type="general",
+        )
 
         return GenerateResponse(
             content=content,
@@ -104,9 +155,8 @@ def generate(request: GenerateRequest):
 
 
 @app.post("/api/generate/science")
-def generate_science(request: ScienceRequest):
+def generate_science(request: ScienceRequest, db: Session = Depends(get_db)):
     try:
-        # 1. Descargar papers de arXiv
         papers = load_papers(
             query=request.topic,
             max_results=request.max_papers,
@@ -118,10 +168,7 @@ def generate_science(request: ScienceRequest):
                 detail=f"No se encontraron papers sobre: {request.topic}"
             )
 
-        # 2. Construir vector store con los papers
         vector_store = build_vector_store(papers)
-
-        # 3. Construir cadena RAG y ejecutar query
         chain = build_rag_chain(vector_store)
         query = (
             f"Explica {request.topic} de forma divulgativa "
@@ -129,6 +176,18 @@ def generate_science(request: ScienceRequest):
             f"Responde en {request.language}."
         )
         content = run_rag_query(chain, query)
+
+        save_generation(
+            db=db,
+            platform="science",
+            topic=request.topic,
+            audience=request.audience,
+            content=content,
+            model_used="ollama+rag",
+            tone=request.tone,
+            language=request.language,
+            gen_type="science",
+        )
 
         return {
             "content": content,
@@ -144,13 +203,13 @@ def generate_science(request: ScienceRequest):
 
 
 @app.post("/api/generate/news")
-def generate_news(request: NewsRequest):
+def generate_news(request: NewsRequest, db: Session = Depends(get_db)):
     try:
-        # 1. Obtener noticias actuales
         news = get_financial_news(request.topic)
-        news_context = format_news_as_context(news)
+        news_context = format_news_as_context(
+            [f"Titular: {n['title']}\nDescripción: {n['description']}" for n in news]
+        )
 
-        # 2. Generar contenido inyectando noticias como contexto
         content = generate_content(
             platform=request.platform,
             topic=request.topic,
@@ -159,6 +218,18 @@ def generate_news(request: NewsRequest):
             language=request.language,
             model="groq",
             company_profile=news_context,
+        )
+
+        save_generation(
+            db=db,
+            platform=request.platform,
+            topic=request.topic,
+            audience=request.audience,
+            content=content,
+            model_used="groq",
+            tone=request.tone,
+            language=request.language,
+            gen_type="news",
         )
 
         return {
@@ -173,18 +244,44 @@ def generate_news(request: NewsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/news/financial")
+@app.get("/api/news/financial", response_model=FinancialNewsResponse)
 def get_news(topic: str = "bolsa mercados finanzas"):
     try:
         news = get_financial_news(topic)
-        return {
-            "topic": topic,
-            "count": len(news),
-            "news": news,
-        }
+        return FinancialNewsResponse(
+            topic=topic,
+            count=len(news),
+            news=[NewsHeadline(**item) for item in news],
+        )
     except Exception as e:
         logger.exception(f"Error en /api/news/financial: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/history", response_model=list[GenerationResponse])
+def get_generations(
+    limit: int = 20,
+    skip: int = 0,
+    db: Session = Depends(get_db)
+):
+    generations = get_history(db, limit=limit, skip=skip)
+    return [
+        GenerationResponse(
+            **{**g.__dict__, "created_at": g.created_at.isoformat()}
+        )
+        for g in generations
+    ]
+
+
+@app.delete("/api/history/{generation_id}")
+def delete_generation_endpoint(
+    generation_id: int,
+    db: Session = Depends(get_db)
+):
+    success = delete_generation(db, generation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Generación no encontrada")
+    return {"deleted": True}
 
 
 @app.post("/api/profile", response_model=CompanyProfile)

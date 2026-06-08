@@ -5,10 +5,11 @@ from app.config import settings
 NEWS_API_URL = "https://newsapi.org/v2/everything"
 
 
-def get_financial_news(topic: str) -> list[str]:
+def get_financial_news(topic: str) -> list[dict]:
     """
     Busca noticias financieras actuales sobre el tema dado.
-    Devuelve lista de titulares + descripción o lista vacía si falla.
+    Devuelve lista de dicts con title, description y url.
+    Devuelve lista vacía si falla silenciosamente.
     """
     if not settings.news_api_key:
         return []
@@ -35,8 +36,13 @@ def get_financial_news(topic: str) -> list[str]:
         for article in articles:
             title = article.get("title", "")
             description = article.get("description", "")
+            url = article.get("url", "")
             if title:
-                news.append(f"Titular: {title}\nDescripción: {description}")
+                news.append({
+                    "title": title,
+                    "description": description,
+                    "url": url,
+                })
 
         return news
 
@@ -46,7 +52,7 @@ def get_financial_news(topic: str) -> list[str]:
 
 def format_news_as_context(news: list[str]) -> str:
     """
-    Convierte la lista de noticias en un string de contexto para el prompt.
+    Convierte la lista de strings de noticias en contexto para el prompt.
     """
     if not news:
         return ""
