@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { NewsRequest, NewsHeadline, Language, Platform } from "@/types/content"
 import { getFinancialNews } from "@/services/api"
 
@@ -17,17 +17,32 @@ export default function NewsSection({ onSubmit, isLoading }: NewsSectionProps) {
   const [platform, setPlatform]       = useState<Platform>("linkedin")
   const [headlines, setHeadlines]     = useState<NewsHeadline[]>([])
   const [loadingNews, setLoadingNews] = useState(false)
+  const newsCache = useRef<{data: NewsHeadline[], timestamp: number } | null>(null)
+  const CACHE_TTL = 5*60*1000 //5 minutos
 
   useEffect(() => {
     fetchHeadlines()
   }, [])
 
-  async function fetchHeadlines() {
-    setLoadingNews(true)
-    const news = await getFinancialNews(topic)
-    setHeadlines(news)
-    setLoadingNews(false)
-  }
+  async function fetchHeadlines(forceRefresh = false) {
+    const now = Date.now()
+
+  // Si hay caché válida y no es un refresh forzado, usarla
+    if (
+      !forceRefresh &&
+      newsCache.current &&
+      now - newsCache.current.timestamp < CACHE_TTL
+    ) {
+      setHeadlines(newsCache.current.data)
+      return
+    }
+
+  setLoadingNews(true)
+  const news = await getFinancialNews(topic)
+  newsCache.current = { data: news, timestamp: now }
+  setHeadlines(news)
+  setLoadingNews(false)
+}
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,7 +60,7 @@ export default function NewsSection({ onSubmit, isLoading }: NewsSectionProps) {
             📰 Titulares actuales
           </p>
           <button
-            onClick={fetchHeadlines}
+            onClick={() => fetchHeadlines(true)}
             disabled={loadingNews}
             className="text-xs text-white/40 hover:text-emerald-400 transition-colors disabled:opacity-30"
           >

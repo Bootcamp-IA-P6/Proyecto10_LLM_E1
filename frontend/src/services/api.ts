@@ -104,11 +104,11 @@ export async function getFinancialNews(
 ): Promise<NewsHeadline[]> {
   try {
     const params = topic ? { topic } : {}
-    const response = await apiClient.get<NewsHeadline[]>(
+    const response = await apiClient.get<{ topic: string, count: number, news:NewsHeadline[]}>(
       "/api/news/financial",
       { params }
     )
-    return response.data
+    return response.data.news
   } catch {
     return []
   }
