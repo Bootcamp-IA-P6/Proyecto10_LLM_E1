@@ -25,3 +25,35 @@ export interface CompanyProfile {
     tone: string
     description?: string
 }
+
+export interface ScienceRequest {
+    topic: string
+    audience: string
+    tone?: string
+    language?: Language
+    max_papers?: number
+}
+
+export interface ScienceResponse {
+    content: string 
+    model_used: string
+}
+
+export interface NewsRequest {
+    topic: string
+    audience: string
+    tone?: string
+    language?: Language
+    plataform?: Platform
+}
+
+export interface NewsResponse {
+    content: string 
+    model_used: string
+}
+
+export interface NewsHeadline {
+    title: string
+    description: string
+    url: string
+}
