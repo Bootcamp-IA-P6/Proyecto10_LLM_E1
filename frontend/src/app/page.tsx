@@ -4,17 +4,36 @@ import { useState, useEffect } from "react"
 import GenerateForm from "@/components/GenerateForm"
 import ContentResult from "@/components/ContentResult"
 import ProfileForm from "@/components/ProfileForm"
-import { generateContent, getProfile } from "@/services/api"
-import { GenerateRequest, GenerateResponse, CompanyProfile } from "@/types/content"
+import ScienceForm from "@/components/ScienceForm"
+import NewsSection from "@/components/NewsSection"
+import {
+  generateContent,
+  generateScience,
+  generateNews,
+  getProfile,
+} from "@/services/api"
+import {
+  GenerateRequest,
+  GenerateResponse,
+  ScienceRequest,
+  ScienceResponse,
+  NewsRequest,
+  NewsResponse,
+  CompanyProfile,
+} from "@/types/content"
+
+type Tab = "general" | "science" | "news"
+
+type Result = GenerateResponse | ScienceResponse | NewsResponse | null
 
 export default function Home() {
+  const [activeTab, setActiveTab]         = useState<Tab>("general")
   const [isLoading, setIsLoading]         = useState(false)
-  const [result, setResult]               = useState<GenerateResponse | null>(null)
+  const [result, setResult]               = useState<Result>(null)
   const [error, setError]                 = useState<string | null>(null)
   const [showProfile, setShowProfile]     = useState(false)
   const [activeProfile, setActiveProfile] = useState<CompanyProfile | null>(null)
 
-  // Cargar perfil existente al montar la página
   useEffect(() => {
     async function loadProfile() {
       const profile = await getProfile()
@@ -22,6 +41,13 @@ export default function Home() {
     }
     loadProfile()
   }, [])
+
+  // Cambiar de tab resetea el resultado
+  function handleTabChange(tab: Tab) {
+    setActiveTab(tab)
+    setResult(null)
+    setError(null)
+  }
 
   async function handleGenerate(req: GenerateRequest) {
     setIsLoading(true)
@@ -37,8 +63,35 @@ export default function Home() {
     }
   }
 
+  async function handleGenerateScience(req: ScienceRequest) {
+    setIsLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const data = await generateScience(req)
+      setResult(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleGenerateNews(req: NewsRequest) {
+    setIsLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const data = await generateNews(req)
+      setResult(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   async function handleProfileSaved() {
-    // Recargar el perfil activo tras guardar
     const profile = await getProfile()
     if (profile) {
       setActiveProfile(profile)
@@ -46,10 +99,16 @@ export default function Home() {
     }
   }
 
+  const TAB_LABELS: Record<Tab, string> = {
+    general: "✍️ General",
+    science: "🔬 Científico",
+    news:    "📰 Noticias",
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-900 to-green-900 flex flex-col items-center px-4 py-12 gap-10">
 
-      {/* Orbes decorativos de fondo */}
+      {/* Orbes decorativos */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500 rounded-full opacity-10 blur-3xl" />
         <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-400 rounded-full opacity-10 blur-3xl" />
@@ -99,7 +158,6 @@ export default function Home() {
           </span>
         </button>
 
-        {/* Badge perfil activo */}
         {activeProfile && !showProfile && (
           <div className="flex gap-2 flex-wrap px-1">
             <span className="text-xs bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 px-2 py-1 rounded-full">
@@ -111,22 +169,53 @@ export default function Home() {
           </div>
         )}
 
-        {/* Formulario de perfil colapsable */}
         {showProfile && (
-          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
+          <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
             <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
             <ProfileForm onSaved={handleProfileSaved} />
           </div>
         )}
       </div>
 
-      {/* Tarjeta principal de generación */}
+      {/* Tabs */}
+      <div className="w-full max-w-xl flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+        {(Object.keys(TAB_LABELS) as Tab[]).map(tab => (
+          <button
+            key={tab}
+            onClick={() => handleTabChange(tab)}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+              activeTab === tab
+                ? "bg-emerald-500 text-white shadow-sm"
+                : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            {TAB_LABELS[tab]}
+          </button>
+        ))}
+      </div>
+
+      {/* Tarjeta principal */}
       <div className="relative w-full max-w-xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl shadow-black/30">
         <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
-        <GenerateForm
-          onSubmit={handleGenerate}
-          isLoading={isLoading}
-        />
+
+        {activeTab === "general" && (
+          <GenerateForm
+            onSubmit={handleGenerate}
+            isLoading={isLoading}
+          />
+        )}
+        {activeTab === "science" && (
+          <ScienceForm
+            onSubmit={handleGenerateScience}
+            isLoading={isLoading}
+          />
+        )}
+        {activeTab === "news" && (
+          <NewsSection
+            onSubmit={handleGenerateNews}
+            isLoading={isLoading}
+          />
+        )}
       </div>
 
       {/* Error */}
@@ -139,7 +228,7 @@ export default function Home() {
       {/* Resultado */}
       <div className="w-full max-w-xl">
         <ContentResult
-          result={result}
+          result={result as GenerateResponse | null}
           isLoading={isLoading}
         />
       </div>
