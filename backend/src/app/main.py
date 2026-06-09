@@ -58,6 +58,8 @@ class GenerateResponse(BaseModel):
     platform: str
     model_used: str
     image_url: str = ""
+    quality_score: Optional[float] = None
+    quality_feedback: Optional[str] = None
 
 
 class ScienceRequest(BaseModel):
@@ -90,7 +92,6 @@ class FinancialNewsResponse(BaseModel):
 
 class GenerationResponse(BaseModel):
     id: int
-    content: str
     platform: str
     topic: str
     audience: str
@@ -158,6 +159,8 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
             language=request.language,
             image_url=image_url or "",
             gen_type=result.get("content_type", "general"),
+            quality_score=result.get("quality_score"),
+            quality_feedback=result.get("quality_feedback"),
         )
 
         return GenerateResponse(
