@@ -15,13 +15,39 @@ const PLATFORM_LABELS: Record<string, string> = {
   twitter:   "Twitter / X",
   linkedin:  "LinkedIn",
   instagram: "Instagram",
+  science:   "Científico",
+}
+
+type FilterType = "all" | "general" | "science" | "news"
+
+const FILTER_LABELS: Record<FilterType, string> = {
+  all:     "Todos",
+  general: "✍️ General",
+  science: "🔬 Científico",
+  news:    "📰 Noticias",
+}
+
+function QualityBadgeMini({ score }: { score: number }) {
+  const config =
+    score >= 0.8
+      ? { label: "✅ Alta",      classes: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" }
+      : score >= 0.6
+      ? { label: "⚠️ Aceptable", classes: "bg-yellow-500/20 text-yellow-300 border-yellow-400/30" }
+      : { label: "❌ Revisar",   classes: "bg-red-500/20 text-red-300 border-red-400/30" }
+
+  return (
+    <span className={`text-xs border px-2 py-0.5 rounded-full ${config.classes}`}>
+      {config.label} · {(score * 10).toFixed(1)}/10
+    </span>
+  )
 }
 
 export default function HistoryPanel() {
   const [history, setHistory]     = useState<GenerationRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expanded, setExpanded]   = useState<number | null>(null)
-  const [backendReady, setBackendReady] = useState(true)
+  const [filter, setFilter]       = useState<FilterType>("all")
+  const [copiedId, setCopiedId]   = useState<number | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -30,10 +56,6 @@ export default function HistoryPanel() {
   async function loadHistory() {
     setIsLoading(true)
     const data = await getHistory()
-    if (data.length === 0) {
-      // Puede ser backend no listo o simplemente vacío
-      // Lo distinguimos intentando la llamada
-    }
     setHistory(data)
     setIsLoading(false)
   }
@@ -46,6 +68,12 @@ export default function HistoryPanel() {
     }
   }
 
+  function handleCopy(id: number, content: string) {
+    navigator.clipboard.writeText(content)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
   function formatDate(isoString: string) {
     const date = new Date(isoString)
     return date.toLocaleDateString("es-ES", {
@@ -55,6 +83,10 @@ export default function HistoryPanel() {
       minute: "2-digit",
     })
   }
+
+  const filtered = filter === "all"
+    ? history
+    : history.filter(r => r.gen_type === filter)
 
   // Estado: cargando
   if (isLoading) {
@@ -88,7 +120,7 @@ export default function HistoryPanel() {
       {/* Cabecera */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-white/40">
-          {history.length} generación{history.length !== 1 ? "es" : ""} guardada{history.length !== 1 ? "s" : ""}
+          {filtered.length} de {history.length} generación{history.length !== 1 ? "es" : ""}
         </p>
         <button
           onClick={loadHistory}
@@ -98,9 +130,35 @@ export default function HistoryPanel() {
         </button>
       </div>
 
+      {/* Filtros */}
+      <div className="flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1 w-fit">
+        {(Object.keys(FILTER_LABELS) as FilterType[]).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              filter === f
+                ? "bg-emerald-500 text-white shadow-sm"
+                : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            {FILTER_LABELS[f]}
+          </button>
+        ))}
+      </div>
+
+      {/* Sin resultados tras filtrar */}
+      {filtered.length === 0 && (
+        <div className="flex items-center justify-center h-24 border-2 border-dashed border-white/10 rounded-xl">
+          <p className="text-sm text-white/30">
+            No hay generaciones de tipo {FILTER_LABELS[filter]}
+          </p>
+        </div>
+      )}
+
       {/* Lista */}
       <div className="flex flex-col gap-2">
-        {history.map(record => (
+        {filtered.map(record => (
           <div
             key={record.id}
             className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
@@ -111,7 +169,7 @@ export default function HistoryPanel() {
               onClick={() => setExpanded(expanded === record.id ? null : record.id)}
             >
               <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-emerald-300 font-medium">
                     {GEN_TYPE_LABELS[record.gen_type] ?? record.gen_type}
                   </span>
@@ -119,6 +177,9 @@ export default function HistoryPanel() {
                   <span className="text-xs text-white/40">
                     {PLATFORM_LABELS[record.platform] ?? record.platform}
                   </span>
+                  {record.quality_score !== undefined && (
+                    <QualityBadgeMini score={record.quality_score} />
+                  )}
                 </div>
                 <p className="text-sm text-white/70 truncate">
                   {record.topic}
@@ -174,6 +235,13 @@ export default function HistoryPanel() {
                   )}
                 </div>
 
+                {/* Quality feedback si existe */}
+                {record.quality_feedback && (
+                  <p className="text-xs text-white/40 italic">
+                    💬 {record.quality_feedback}
+                  </p>
+                )}
+
                 {/* Contenido */}
                 <div className="bg-black/20 rounded-lg p-3 text-xs text-emerald-50 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
                   {record.content}
@@ -181,10 +249,10 @@ export default function HistoryPanel() {
 
                 {/* Botón copiar */}
                 <button
-                  onClick={() => navigator.clipboard.writeText(record.content)}
+                  onClick={() => handleCopy(record.id, record.content)}
                   className="self-end text-xs text-white/40 hover:text-emerald-400 transition-colors"
                 >
-                  Copiar al portapapeles
+                  {copiedId === record.id ? "✅ Copiado" : "Copiar al portapapeles"}
                 </button>
 
               </div>
