@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import GenerateForm from "@/components/GenerateForm"
 import ContentResult from "@/components/ContentResult"
 import ProfileForm from "@/components/ProfileForm"
@@ -36,6 +36,11 @@ export default function Home() {
   const [activeProfile, setActiveProfile] = useState<CompanyProfile | null>(null)
   const [historyKey, setHistoryKey]       = useState(0)
 
+  // Guardamos la última request para el botón regenerar
+  const lastGeneralReq  = useRef<GenerateRequest | null>(null)
+  const lastScienceReq  = useRef<ScienceRequest | null>(null)
+  const lastNewsReq     = useRef<NewsRequest | null>(null)
+
   useEffect(() => {
     async function loadProfile() {
       const profile = await getProfile()
@@ -51,13 +56,14 @@ export default function Home() {
   }
 
   async function handleGenerate(req: GenerateRequest) {
+    lastGeneralReq.current = req
     setIsLoading(true)
     setError(null)
     setResult(null)
     try {
       const data = await generateContent(req)
       setResult(data)
-      setHistoryKey(prev => prev + 1) // fuerza recarga del historial
+      setHistoryKey(prev => prev + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado")
     } finally {
@@ -66,6 +72,7 @@ export default function Home() {
   }
 
   async function handleGenerateScience(req: ScienceRequest) {
+    lastScienceReq.current = req
     setIsLoading(true)
     setError(null)
     setResult(null)
@@ -81,6 +88,7 @@ export default function Home() {
   }
 
   async function handleGenerateNews(req: NewsRequest) {
+    lastNewsReq.current = req
     setIsLoading(true)
     setError(null)
     setResult(null)
@@ -92,6 +100,16 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Error inesperado")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleRegenerate() {
+    if (activeTab === "general" && lastGeneralReq.current) {
+      await handleGenerate(lastGeneralReq.current)
+    } else if (activeTab === "science" && lastScienceReq.current) {
+      await handleGenerateScience(lastScienceReq.current)
+    } else if (activeTab === "news" && lastNewsReq.current) {
+      await handleGenerateNews(lastNewsReq.current)
     }
   }
 
@@ -203,22 +221,13 @@ export default function Home() {
         <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
 
         {activeTab === "general" && (
-          <GenerateForm
-            onSubmit={handleGenerate}
-            isLoading={isLoading}
-          />
+          <GenerateForm onSubmit={handleGenerate} isLoading={isLoading} />
         )}
         {activeTab === "science" && (
-          <ScienceForm
-            onSubmit={handleGenerateScience}
-            isLoading={isLoading}
-          />
+          <ScienceForm onSubmit={handleGenerateScience} isLoading={isLoading} />
         )}
         {activeTab === "news" && (
-          <NewsSection
-            onSubmit={handleGenerateNews}
-            isLoading={isLoading}
-          />
+          <NewsSection onSubmit={handleGenerateNews} isLoading={isLoading} />
         )}
       </div>
 
@@ -234,6 +243,7 @@ export default function Home() {
         <ContentResult
           result={result as GenerateResponse | null}
           isLoading={isLoading}
+          onRegenerate={result ? handleRegenerate : undefined}
         />
       </div>
 
@@ -254,7 +264,6 @@ export default function Home() {
 
         {showHistory && (
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
-            <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
             <HistoryPanel key={historyKey} />
           </div>
         )}
