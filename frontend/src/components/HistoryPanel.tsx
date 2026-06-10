@@ -7,33 +7,33 @@ import { getHistory, deleteGeneration } from "@/services/api"
 const GEN_TYPE_LABELS: Record<string, string> = {
   general: "✍️ General",
   science: "🔬 Científico",
-  news:    "📰 Noticias",
+  news: "📰 Noticias",
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
-  blog:      "Blog",
-  twitter:   "Twitter / X",
-  linkedin:  "LinkedIn",
+  blog: "Blog",
+  twitter: "Twitter / X",
+  linkedin: "LinkedIn",
   instagram: "Instagram",
-  science:   "Científico",
+  science: "Científico",
 }
 
 type FilterType = "all" | "general" | "science" | "news"
 
 const FILTER_LABELS: Record<FilterType, string> = {
-  all:     "Todos",
+  all: "Todos",
   general: "✍️ General",
   science: "🔬 Científico",
-  news:    "📰 Noticias",
+  news: "📰 Noticias",
 }
 
 function QualityBadgeMini({ score }: { score: number }) {
   const config =
     score >= 0.8
-      ? { label: "✅ Alta",      classes: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" }
+      ? { label: "✅ Alta", classes: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" }
       : score >= 0.6
-      ? { label: "⚠️ Aceptable", classes: "bg-yellow-500/20 text-yellow-300 border-yellow-400/30" }
-      : { label: "❌ Revisar",   classes: "bg-red-500/20 text-red-300 border-red-400/30" }
+        ? { label: "⚠️ Aceptable", classes: "bg-yellow-500/20 text-yellow-300 border-yellow-400/30" }
+        : { label: "❌ Revisar", classes: "bg-red-500/20 text-red-300 border-red-400/30" }
 
   return (
     <span className={`text-xs border px-2 py-0.5 rounded-full ${config.classes}`}>
@@ -43,11 +43,11 @@ function QualityBadgeMini({ score }: { score: number }) {
 }
 
 export default function HistoryPanel() {
-  const [history, setHistory]     = useState<GenerationRecord[]>([])
+  const [history, setHistory] = useState<GenerationRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [expanded, setExpanded]   = useState<number | null>(null)
-  const [filter, setFilter]       = useState<FilterType>("all")
-  const [copiedId, setCopiedId]   = useState<number | null>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [filter, setFilter] = useState<FilterType>("all")
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -77,9 +77,9 @@ export default function HistoryPanel() {
   function formatDate(isoString: string) {
     const date = new Date(isoString)
     return date.toLocaleDateString("es-ES", {
-      day:    "2-digit",
-      month:  "short",
-      hour:   "2-digit",
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
       minute: "2-digit",
     })
   }
@@ -136,11 +136,10 @@ export default function HistoryPanel() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-              filter === f
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${filter === f
                 ? "bg-emerald-500 text-white shadow-sm"
                 : "text-white/40 hover:text-white/70"
-            }`}
+              }`}
           >
             {FILTER_LABELS[f]}
           </button>
@@ -177,7 +176,7 @@ export default function HistoryPanel() {
                   <span className="text-xs text-white/40">
                     {PLATFORM_LABELS[record.platform] ?? record.platform}
                   </span>
-                  {record.quality_score !== undefined && (
+                  {record.quality_score != null && (
                     <QualityBadgeMini score={record.quality_score} />
                   )}
                 </div>
