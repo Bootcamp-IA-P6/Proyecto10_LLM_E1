@@ -84,9 +84,13 @@ export default function HistoryPanel() {
     })
   }
 
+  const GENERAL_TYPES = ["general", "blog", "social", "finance"]
+
   const filtered = filter === "all"
     ? history
-    : history.filter(r => r.gen_type === filter)
+    : filter === "general"
+      ? history.filter(r => GENERAL_TYPES.includes(r.gen_type))
+      : history.filter(r => r.gen_type === filter)
 
   // Estado: cargando
   if (isLoading) {
@@ -137,8 +141,8 @@ export default function HistoryPanel() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${filter === f
-                ? "bg-emerald-500 text-white shadow-sm"
-                : "text-white/40 hover:text-white/70"
+              ? "bg-emerald-500 text-white shadow-sm"
+              : "text-white/40 hover:text-white/70"
               }`}
           >
             {FILTER_LABELS[f]}
