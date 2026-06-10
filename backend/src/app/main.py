@@ -14,6 +14,8 @@ from app.rag.arxiv_loader import load_papers
 from app.rag.vector_store import build_vector_store
 from app.rag.rag_chain import build_rag_chain, run_rag_query
 from app.database.database import init_db, get_db
+from app.agents.graph import content_graph
+from app.agents.state import ContentState
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,8 @@ class GenerateResponse(BaseModel):
     platform: str
     model_used: str
     image_url: str = ""
+    quality_score: Optional[float] = None
+    quality_feedback: Optional[str] = None
 
 
 class ScienceRequest(BaseModel):
@@ -96,6 +100,8 @@ class GenerationResponse(BaseModel):
     model_used: str
     content: str
     image_url: Optional[str]
+    quality_score: Optional[float] = None
+    quality_feedback: Optional[str] = None
     gen_type: str
     created_at: str
 
@@ -115,7 +121,8 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
     try:
         company_profile = request.company_profile or get_profile_as_text()
 
-        content = generate_content(
+        # Construir estado inicial para el grafo
+        initial_state = ContentState(
             platform=request.platform,
             topic=request.topic,
             audience=request.audience,
@@ -123,9 +130,23 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
             language=request.language,
             model=request.model,
             company_profile=company_profile,
+            content_type="",
+            generated_content=None,
+            image_url=None,
+            quality_score=None,
+            quality_feedback=None,
+            error=None,
         )
 
-        image_url = get_image(request.topic)
+        # Ejecutar el grafo multiagente
+        result = content_graph.invoke(initial_state)
+
+        # Comprobar si hubo error en algún agente
+        if result.get("error"):
+            raise ValueError(result["error"])
+
+        content   = result.get("generated_content", "")
+        image_url = result.get("image_url", "")
 
         save_generation(
             db=db,
@@ -136,22 +157,28 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
             model_used=request.model,
             tone=request.tone,
             language=request.language,
-            image_url=image_url,
-            gen_type="general",
+            image_url=image_url or "",
+            gen_type=result.get("content_type", "general"),
+            quality_score=result.get("quality_score"),
+            quality_feedback=result.get("quality_feedback"),
         )
 
         return GenerateResponse(
             content=content,
             platform=request.platform,
             model_used=request.model,
-            image_url=image_url,
+            image_url=image_url or "",
+            quality_score=result.get("quality_score"),
+            quality_feedback=result.get("quality_feedback"),
         )
+
     except ValueError as e:
         logger.error(f"ValueError en /api/generate: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.exception(f"Error en /api/generate: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/api/generate/science")
