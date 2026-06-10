@@ -230,7 +230,8 @@ Health check.
 | Fase 1 — Esencial | ✅ Completada | FastAPI + prompts + Groq + UI Next.js |
 | Fase 2 — Medio | ✅ Completada | Ollama + Docker + imágenes + perfil empresa |
 | Fase 3 — Avanzado | ✅ Completada | RAG arXiv + Chroma + LangSmith + noticias + historial SQLite |
-| Fase 4 — Experto | 🔲 En progreso | LangGraph multiagente + GraphRAG + guardarraíles |
+| Fase 4 — Experto | ✅ Completada | LangGraph multiagente + GraphRAG + guardarraíles + quality score UI |
+
 
 ---
 
