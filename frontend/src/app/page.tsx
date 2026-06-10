@@ -15,31 +15,31 @@ import {
 } from "@/services/api"
 import {
   GenerateRequest,
-  GenerateResponse,
   ScienceRequest,
   ScienceResponse,
   NewsRequest,
   NewsResponse,
   CompanyProfile,
+  AnyResult,
 } from "@/types/content"
 
-type Tab    = "general" | "science" | "news"
+type Tab = "general" | "science" | "news"
 type Result = GenerateResponse | ScienceResponse | NewsResponse | null
 
 export default function Home() {
-  const [activeTab, setActiveTab]         = useState<Tab>("general")
-  const [isLoading, setIsLoading]         = useState(false)
-  const [result, setResult]               = useState<Result>(null)
-  const [error, setError]                 = useState<string | null>(null)
-  const [showProfile, setShowProfile]     = useState(false)
-  const [showHistory, setShowHistory]     = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>("general")
+  const [isLoading, setIsLoading] = useState(false)
+  const [result, setResult] = useState<Result>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [showProfile, setShowProfile] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [activeProfile, setActiveProfile] = useState<CompanyProfile | null>(null)
-  const [historyKey, setHistoryKey]       = useState(0)
+  const [historyKey, setHistoryKey] = useState(0)
 
   // Guardamos la última request para el botón regenerar
-  const lastGeneralReq  = useRef<GenerateRequest | null>(null)
-  const lastScienceReq  = useRef<ScienceRequest | null>(null)
-  const lastNewsReq     = useRef<NewsRequest | null>(null)
+  const lastGeneralReq = useRef<GenerateRequest | null>(null)
+  const lastScienceReq = useRef<ScienceRequest | null>(null)
+  const lastNewsReq = useRef<NewsRequest | null>(null)
 
   useEffect(() => {
     async function loadProfile() {
@@ -124,7 +124,7 @@ export default function Home() {
   const TAB_LABELS: Record<Tab, string> = {
     general: "✍️ General",
     science: "🔬 Científico",
-    news:    "📰 Noticias",
+    news: "📰 Noticias",
   }
 
   return (
@@ -205,11 +205,10 @@ export default function Home() {
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
-            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-              activeTab === tab
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === tab
                 ? "bg-emerald-500 text-white shadow-sm"
                 : "text-white/40 hover:text-white/70"
-            }`}
+              }`}
           >
             {TAB_LABELS[tab]}
           </button>
@@ -241,7 +240,7 @@ export default function Home() {
       {/* Resultado */}
       <div className="w-full max-w-xl">
         <ContentResult
-          result={result as GenerateResponse | null}
+          result={result}
           isLoading={isLoading}
           onRegenerate={result ? handleRegenerate : undefined}
         />

@@ -1,12 +1,13 @@
 "use client"
-
 import { useState } from "react"
 import ReactMarkdown from "react-markdown"
-import { GenerateResponse } from "@/types/content"
+import { GenerateResponse, ScienceResponse, NewsResponse } from "@/types/content"
+
+type AnyResult = GenerateResponse | ScienceResponse | NewsResponse
 
 interface ContentResultProps {
-    result:     GenerateResponse | null
-    isLoading:  boolean
+    result:        AnyResult | null
+    isLoading:     boolean
     onRegenerate?: () => void
 }
 
@@ -22,10 +23,10 @@ type Tab = "raw" | "preview"
 function QualityBadge({ score, feedback }: { score: number; feedback?: string }) {
     const config =
         score >= 0.8
-            ? { label: "✅ Alta calidad",       classes: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" }
+            ? { label: "✅ Alta calidad",      classes: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" }
             : score >= 0.6
-            ? { label: "⚠️ Calidad aceptable",  classes: "bg-yellow-500/20 text-yellow-300 border-yellow-400/30" }
-            : { label: "❌ Revisar contenido",  classes: "bg-red-500/20 text-red-300 border-red-400/30" }
+            ? { label: "⚠️ Calidad aceptable", classes: "bg-yellow-500/20 text-yellow-300 border-yellow-400/30" }
+            : { label: "❌ Revisar contenido", classes: "bg-red-500/20 text-red-300 border-red-400/30" }
 
     return (
         <div className="flex flex-col gap-1">
@@ -49,6 +50,12 @@ export default function ContentResult({ result, isLoading, onRegenerate }: Conte
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
+
+    // Acceso defensivo a campos que solo existen en GenerateResponse
+    const imageUrl      = (result as GenerateResponse)?.image_url
+    const platform      = (result as GenerateResponse)?.platform
+    const qualityScore  = (result as GenerateResponse)?.quality_score
+    const qualityFeedback = (result as GenerateResponse)?.quality_feedback
 
     // Estado: cargando — shimmer effect
     if (isLoading) {
@@ -80,30 +87,36 @@ export default function ContentResult({ result, isLoading, onRegenerate }: Conte
     return (
         <div className="w-full flex flex-col gap-3 animate-[fadeIn_0.4s_ease-in-out]">
 
-            {/* Imagen de Unsplash */}
-            {result.image_url && (
+            {/* Imagen de Unsplash — solo en GenerateResponse */}
+            {imageUrl && (
                 <img
-                    src={result.image_url}
-                    alt={`Imagen para ${PLATFORM_LABELS[result.platform] ?? result.platform}`}
+                    src={imageUrl}
+                    alt={`Imagen para ${PLATFORM_LABELS[platform] ?? platform}`}
                     className="w-full h-48 object-cover rounded-xl border border-white/10"
                 />
             )}
 
             {/* Cabecera con metadatos */}
             <div className="flex items-center justify-between">
-                <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
-                    {PLATFORM_LABELS[result.platform] ?? result.platform}
-                </span>
+                {platform ? (
+                    <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
+                        {PLATFORM_LABELS[platform] ?? platform}
+                    </span>
+                ) : (
+                    <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
+                        {result.model_used}
+                    </span>
+                )}
                 <span className="text-xs text-white/30">
                     Modelo: {result.model_used}
                 </span>
             </div>
 
-            {/* Quality badge */}
-            {result.quality_score !== undefined && (
+            {/* Quality badge — solo si existe el score */}
+            {qualityScore !== undefined && (
                 <QualityBadge
-                    score={result.quality_score}
-                    feedback={result.quality_feedback}
+                    score={qualityScore}
+                    feedback={qualityFeedback}
                 />
             )}
 
@@ -163,7 +176,7 @@ export default function ContentResult({ result, isLoading, onRegenerate }: Conte
             <div className="flex items-center justify-between">
                 <span className="text-xs text-white/30">
                     {result.content.length} caracteres
-                    {result.platform === "twitter" && (
+                    {platform === "twitter" && (
                         <span className={result.content.length > 1400 ? "text-yellow-400 ml-1" : "ml-1"}>
                             · ~{Math.ceil(result.content.length / 280)} tweets estimados
                         </span>
