@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     # NewsAPI
     news_api_key: str = ""
+    
+    #Hugging Face
+    hf_api_key: str = ""
 
     model_config = {
         "env_file": ".env",
