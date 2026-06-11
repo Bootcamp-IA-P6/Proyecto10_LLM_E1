@@ -31,7 +31,12 @@ def extract_entities(text: str) -> list[dict]:
         json_match = re.search(r'\{.*?\}', text_out, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group())
-            return data.get("entities", [])
+            entities = data.get("entities", [])
+            # Verificar que cada entidad es un dict con "name"
+            return [
+                e for e in entities
+                if isinstance(e, dict) and "name" in e
+            ]
         return []
 
     except Exception:
