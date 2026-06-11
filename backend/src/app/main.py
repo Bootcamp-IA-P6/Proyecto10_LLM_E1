@@ -16,13 +16,14 @@ from app.rag.rag_chain import build_rag_chain, run_rag_query
 from app.database.database import init_db, get_db
 from app.agents.graph import content_graph
 from app.agents.state import ContentState
+from app.services.image_router import get_image_by_source
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Digital Content AI",
     description="Generación automática de contenido con LLMs",
-    version="3.1.0",
+    version="4.0.0",
 )
 
 app.add_middleware(
@@ -44,66 +45,69 @@ def startup_event():
 # ── Modelos Pydantic ──────────────────────────────────────────────
 
 class GenerateRequest(BaseModel):
-    platform: str
-    topic: str
-    audience: str
-    tone: str = "profesional"
-    language: str = "es"
-    model: str = "groq"
+    platform:        str
+    topic:           str
+    audience:        str
+    tone:            str            = "profesional"
+    language:        str            = "es"
+    model:           str            = "groq"
     company_profile: Optional[str] = ""
+    image_source:    str            = "unsplash"  # unsplash | huggingface | pollinations
 
 
 class GenerateResponse(BaseModel):
-    content: str
-    platform: str
-    model_used: str
-    image_url: str = ""
-    quality_score: Optional[float] = None
-    quality_feedback: Optional[str] = None
+    content:          str
+    platform:         str
+    model_used:       str
+    image_url:        str           = ""
+    quality_score:    Optional[float] = None
+    quality_feedback: Optional[str]   = None
 
 
 class ScienceRequest(BaseModel):
-    topic: str
-    audience: str
-    tone: str = "divulgativo"
-    language: str = "es"
-    max_papers: int = 5
+    topic:       str
+    audience:    str
+    tone:        str = "divulgativo"
+    language:    str = "es"
+    max_papers:  int = 5
+    # Sin image_source — science usa Unsplash por defecto
 
 
 class NewsRequest(BaseModel):
-    topic: str
+    topic:    str
     platform: str
     audience: str
-    tone: str = "profesional"
+    tone:     str = "profesional"
     language: str = "es"
+    # Sin image_source — news usa Unsplash por defecto
 
 
 class NewsHeadline(BaseModel):
-    title: str
+    title:       str
     description: str
-    url: str
+    url:         str
 
 
 class FinancialNewsResponse(BaseModel):
     topic: str
     count: int
-    news: list[NewsHeadline]
+    news:  list[NewsHeadline]
 
 
 class GenerationResponse(BaseModel):
-    id: int
-    platform: str
-    topic: str
-    audience: str
-    tone: Optional[str]
-    language: Optional[str]
-    model_used: str
-    content: str
-    image_url: Optional[str]
-    quality_score: Optional[float] = None
-    quality_feedback: Optional[str] = None
-    gen_type: str
-    created_at: str
+    id:               int
+    platform:         str
+    topic:            str
+    audience:         str
+    tone:             Optional[str]
+    language:         Optional[str]
+    model_used:       str
+    content:          str
+    image_url:        Optional[str]
+    quality_score:    Optional[float] = None
+    quality_feedback: Optional[str]   = None
+    gen_type:         str
+    created_at:       str
 
     class Config:
         from_attributes = True
@@ -121,7 +125,6 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
     try:
         company_profile = request.company_profile or get_profile_as_text()
 
-        # Construir estado inicial para el grafo
         initial_state = ContentState(
             platform=request.platform,
             topic=request.topic,
@@ -138,15 +141,15 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
             error=None,
         )
 
-        # Ejecutar el grafo multiagente
         result = content_graph.invoke(initial_state)
 
-        # Comprobar si hubo error en algún agente
         if result.get("error"):
             raise ValueError(result["error"])
 
-        content   = result.get("generated_content", "")
-        image_url = result.get("image_url", "")
+        content = result.get("generated_content", "")
+
+        # Usar image_router según la fuente seleccionada
+        image_url = get_image_by_source(request.topic, request.image_source)
 
         save_generation(
             db=db,
@@ -180,7 +183,6 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 @app.post("/api/generate/science")
 def generate_science(request: ScienceRequest, db: Session = Depends(get_db)):
     try:
@@ -196,13 +198,14 @@ def generate_science(request: ScienceRequest, db: Session = Depends(get_db)):
             )
 
         vector_store = build_vector_store(papers)
-        chain = build_rag_chain(vector_store)
-        query = (
+        chain        = build_rag_chain(vector_store)
+        query        = (
             f"Explica {request.topic} de forma divulgativa "
             f"para {request.audience} en tono {request.tone}. "
             f"Responde en {request.language}."
         )
-        content = run_rag_query(chain, query)
+        content   = run_rag_query(chain, query)
+        image_url = get_image(request.topic)  # Unsplash por defecto en science
 
         save_generation(
             db=db,
@@ -213,15 +216,18 @@ def generate_science(request: ScienceRequest, db: Session = Depends(get_db)):
             model_used="ollama+rag",
             tone=request.tone,
             language=request.language,
+            image_url=image_url or "",
             gen_type="science",
         )
 
         return {
-            "content": content,
-            "topic": request.topic,
+            "content":     content,
+            "topic":       request.topic,
             "papers_used": len(papers),
-            "model_used": "ollama+rag",
+            "model_used":  "ollama+rag",
+            "image_url":   image_url,
         }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -232,12 +238,12 @@ def generate_science(request: ScienceRequest, db: Session = Depends(get_db)):
 @app.post("/api/generate/news")
 def generate_news(request: NewsRequest, db: Session = Depends(get_db)):
     try:
-        news = get_financial_news(request.topic)
+        news         = get_financial_news(request.topic)
         news_context = format_news_as_context(
             [f"Titular: {n['title']}\nDescripción: {n['description']}" for n in news]
         )
 
-        content = generate_content(
+        content   = generate_content(
             platform=request.platform,
             topic=request.topic,
             audience=request.audience,
@@ -246,6 +252,7 @@ def generate_news(request: NewsRequest, db: Session = Depends(get_db)):
             model="groq",
             company_profile=news_context,
         )
+        image_url = get_image(request.topic)  # Unsplash por defecto en news
 
         save_generation(
             db=db,
@@ -256,16 +263,19 @@ def generate_news(request: NewsRequest, db: Session = Depends(get_db)):
             model_used="groq",
             tone=request.tone,
             language=request.language,
+            image_url=image_url or "",
             gen_type="news",
         )
 
         return {
-            "content": content,
-            "topic": request.topic,
-            "platform": request.platform,
+            "content":    content,
+            "topic":      request.topic,
+            "platform":   request.platform,
             "news_count": len(news),
             "model_used": "groq",
+            "image_url":  image_url,
         }
+
     except Exception as e:
         logger.exception(f"Error en /api/generate/news: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -288,8 +298,8 @@ def get_news(topic: str = "bolsa mercados finanzas"):
 @app.get("/api/history", response_model=list[GenerationResponse])
 def get_generations(
     limit: int = 20,
-    skip: int = 0,
-    db: Session = Depends(get_db)
+    skip:  int = 0,
+    db:    Session = Depends(get_db)
 ):
     generations = get_history(db, limit=limit, skip=skip)
     return [
