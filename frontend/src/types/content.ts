@@ -17,6 +17,8 @@ export interface GenerateResponse {
     platform: Platform
     model_used: string
     image_url?: string
+    quality_score?: number
+    quality_feedback?: string
 }
 
 export interface CompanyProfile {
@@ -35,8 +37,10 @@ export interface ScienceRequest {
 }
 
 export interface ScienceResponse {
-    content: string 
+    content: string
     model_used: string
+    quality_score?: number
+    quality_feedback?: string
 }
 
 export interface NewsRequest {
@@ -48,8 +52,10 @@ export interface NewsRequest {
 }
 
 export interface NewsResponse {
-    content: string 
+    content: string
     model_used: string
+    quality_score?: number
+    quality_feedback?: string
 }
 
 export interface NewsHeadline {
@@ -68,6 +74,8 @@ export interface GenerationRecord {
     model_used: string
     content: string
     image_url: string | null
-    gen_type: "general" | "science" | "news"
+    gen_type: "general" | "blog" | "social" | "finance" | "science" | "news"
     created_at: string
+    quality_score?: number
+    quality_feedback?: string
 }

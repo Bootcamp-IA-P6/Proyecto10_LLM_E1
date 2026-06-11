@@ -1,12 +1,14 @@
 "use client"
-
 import { useState } from "react"
 import ReactMarkdown from "react-markdown"
-import { GenerateResponse } from "@/types/content"
+import { GenerateResponse, ScienceResponse, NewsResponse } from "@/types/content"
+
+type AnyResult = GenerateResponse | ScienceResponse | NewsResponse
 
 interface ContentResultProps {
-    result:    GenerateResponse | null
-    isLoading: boolean
+    result:        AnyResult | null
+    isLoading:     boolean
+    onRegenerate?: () => void
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -18,19 +20,54 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 type Tab = "raw" | "preview"
 
-export default function ContentResult({ result, isLoading }: ContentResultProps) {
-    const [activeTab, setActiveTab] = useState<Tab>("raw")
+function QualityBadge({ score, feedback }: { score: number; feedback?: string }) {
+    const config =
+        score >= 0.8
+            ? { label: "✅ Alta calidad",      classes: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" }
+            : score >= 0.6
+            ? { label: "⚠️ Calidad aceptable", classes: "bg-yellow-500/20 text-yellow-300 border-yellow-400/30" }
+            : { label: "❌ Revisar contenido", classes: "bg-red-500/20 text-red-300 border-red-400/30" }
 
-    // Estado: cargando
+    return (
+        <div className="flex flex-col gap-1">
+            <span className={`text-xs font-medium border px-2 py-1 rounded-full w-fit ${config.classes}`}>
+                {config.label} · {(score * 10).toFixed(1)}/10
+            </span>
+            {feedback && (
+                <p className="text-xs text-white/40 pl-1">{feedback}</p>
+            )}
+        </div>
+    )
+}
+
+export default function ContentResult({ result, isLoading, onRegenerate }: ContentResultProps) {
+    const [activeTab, setActiveTab] = useState<Tab>("raw")
+    const [copied, setCopied]       = useState(false)
+
+    const handleCopy = () => {
+        if (!result) return
+        navigator.clipboard.writeText(result.content)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
+
+    // Acceso defensivo a campos que solo existen en GenerateResponse
+    const imageUrl      = (result as GenerateResponse)?.image_url
+    const platform      = (result as GenerateResponse)?.platform
+    const qualityScore  = (result as GenerateResponse)?.quality_score
+    const qualityFeedback = (result as GenerateResponse)?.quality_feedback
+
+    // Estado: cargando — shimmer effect
     if (isLoading) {
         return (
-            <div className="w-full flex flex-col gap-3 animate-pulse">
-                <div className="h-4 bg-white/10 rounded w-1/3" />
-                <div className="h-4 bg-white/10 rounded w-full" />
-                <div className="h-4 bg-white/10 rounded w-full" />
-                <div className="h-4 bg-white/10 rounded w-5/6" />
-                <div className="h-4 bg-white/10 rounded w-full" />
-                <div className="h-4 bg-white/10 rounded w-4/6" />
+            <div className="w-full flex flex-col gap-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
+                        key={i}
+                        className="h-4 rounded bg-gradient-to-r from-white/5 via-white/10 to-white/5 bg-[length:200%_100%] animate-[shimmer_1.5s_infinite]"
+                        style={{ width: ["33%", "100%", "100%", "83%", "100%", "66%"][i - 1] }}
+                    />
+                ))}
             </div>
         )
     }
@@ -46,51 +83,58 @@ export default function ContentResult({ result, isLoading }: ContentResultProps)
         )
     }
 
-    // Estado: con resultado
+    // Estado: con resultado — fade-in
     return (
-        <div className="w-full flex flex-col gap-3">
+        <div className="w-full flex flex-col gap-3 animate-[fadeIn_0.4s_ease-in-out]">
 
-            {/* Imagen de Unsplash */}
-            {result.image_url && (
+            {/* Imagen de Unsplash — solo en GenerateResponse */}
+            {imageUrl && (
                 <img
-                    src={result.image_url}
-                    alt={`Imagen para ${PLATFORM_LABELS[result.platform] ?? result.platform}`}
+                    src={imageUrl}
+                    alt={`Imagen para ${PLATFORM_LABELS[platform] ?? platform}`}
                     className="w-full h-48 object-cover rounded-xl border border-white/10"
                 />
             )}
 
             {/* Cabecera con metadatos */}
             <div className="flex items-center justify-between">
-                <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
-                    {PLATFORM_LABELS[result.platform] ?? result.platform}
-                </span>
+                {platform ? (
+                    <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
+                        {PLATFORM_LABELS[platform] ?? platform}
+                    </span>
+                ) : (
+                    <span className="text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-1 rounded-full">
+                        {result.model_used}
+                    </span>
+                )}
                 <span className="text-xs text-white/30">
                     Modelo: {result.model_used}
                 </span>
             </div>
 
+            {/* Quality badge — solo si existe el score */}
+            {qualityScore !== undefined && (
+                <QualityBadge
+                    score={qualityScore}
+                    feedback={qualityFeedback}
+                />
+            )}
+
             {/* Pestañas */}
             <div className="flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1 w-fit">
-                <button
-                    onClick={() => setActiveTab("raw")}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                        activeTab === "raw"
-                            ? "bg-emerald-500 text-white shadow-sm"
-                            : "text-white/40 hover:text-white/70"
-                    }`}
-                >
-                    Raw
-                </button>
-                <button
-                    onClick={() => setActiveTab("preview")}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                        activeTab === "preview"
-                            ? "bg-emerald-500 text-white shadow-sm"
-                            : "text-white/40 hover:text-white/70"
-                    }`}
-                >
-                    Preview
-                </button>
+                {(["raw", "preview"] as Tab[]).map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                            activeTab === tab
+                                ? "bg-emerald-500 text-white shadow-sm"
+                                : "text-white/40 hover:text-white/70"
+                        }`}
+                    >
+                        {tab === "raw" ? "Raw" : "Preview"}
+                    </button>
+                ))}
             </div>
 
             {/* Contenido — Raw */}
@@ -124,19 +168,37 @@ export default function ContentResult({ result, isLoading }: ContentResultProps)
                     prose-blockquote:text-emerald-200
                     prose-hr:border-white/10
                 ">
-                    <ReactMarkdown>
-                        {result.content}
-                    </ReactMarkdown>
+                    <ReactMarkdown>{result.content}</ReactMarkdown>
                 </div>
             )}
 
-            {/* Botón copiar */}
-            <button
-                onClick={() => navigator.clipboard.writeText(result.content)}
-                className="self-end text-xs text-white/40 hover:text-emerald-400 transition-colors"
-            >
-                Copiar al portapapeles
-            </button>
+            {/* Footer — contador de caracteres + acciones */}
+            <div className="flex items-center justify-between">
+                <span className="text-xs text-white/30">
+                    {result.content.length} caracteres
+                    {platform === "twitter" && (
+                        <span className={result.content.length > 1400 ? "text-yellow-400 ml-1" : "ml-1"}>
+                            · ~{Math.ceil(result.content.length / 280)} tweets estimados
+                        </span>
+                    )}
+                </span>
+                <div className="flex gap-3">
+                    {onRegenerate && (
+                        <button
+                            onClick={onRegenerate}
+                            className="text-xs text-white/40 hover:text-emerald-400 transition-colors"
+                        >
+                            🔄 Regenerar
+                        </button>
+                    )}
+                    <button
+                        onClick={handleCopy}
+                        className="text-xs text-white/40 hover:text-emerald-400 transition-colors"
+                    >
+                        {copied ? "✅ Copiado" : "Copiar al portapapeles"}
+                    </button>
+                </div>
+            </div>
 
         </div>
     )
