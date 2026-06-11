@@ -40,11 +40,11 @@ def science_agent_node(state: ContentState) -> ContentState:
             f"{graph_addition}"
         )
 
-        result = chain.invoke({"query": query})
+        result = chain.invoke(query)
 
         content = (
             result["result"]
-            if isinstance(result, dict) and "result" in result
+            if isinstance(result, str)
             else str(result)
         )
 
