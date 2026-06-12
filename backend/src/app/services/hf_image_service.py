@@ -1,45 +1,42 @@
-import httpx
+from huggingface_hub import InferenceClient
 import base64
-import os
+import io
+
 from app.config import settings
-
-
-HF_API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
 
 
 def generate_image_hf(prompt: str) -> str:
     """
-    Genera una imagen con HuggingFace Inference API (FLUX.1-schnell).
-    Devuelve URL en formato base64 data URI o cadena vacía si falla.
+    Genera una imagen con Hugging Face FLUX.1-schnell.
+    Devuelve una data URI base64 o cadena vacía si falla.
     """
+
+    print(f"HF_API_KEY presente: {bool(settings.hf_api_key)}")
+
     if not settings.hf_api_key:
         return ""
 
     try:
-        headers = {"Authorization": f"Bearer {settings.hf_api_key}"}
-        payload = {
-            "inputs": prompt[:300],
-            "parameters": {
-                "num_inference_steps": 4,   # schnell es rápido con pocos pasos
-                "width":  1024,
-                "height": 576,
-            }
-        }
+        client = InferenceClient(
+            api_key=settings.hf_api_key
+        )
 
-        with httpx.Client(timeout=60.0) as client:
-            response = client.post(HF_API_URL, headers=headers, json=payload)
+        image = client.text_to_image(
+            prompt[:300],
+            model="black-forest-labs/FLUX.1-schnell",
+            width=1024,
+            height=576,
+        )
 
-            if response.status_code == 200:
-                # HF devuelve bytes de la imagen — convertir a base64
-                image_bytes  = response.content
-                b64_image    = base64.b64encode(image_bytes).decode("utf-8")
-                return f"data:image/jpeg;base64,{b64_image}"
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG")
 
-            if response.status_code == 503:
-                # Modelo cargando — es normal en free tier
-                return ""
+        b64_image = base64.b64encode(
+            buffer.getvalue()
+        ).decode("utf-8")
 
-        return ""
+        return f"data:image/jpeg;base64,{b64_image}"
 
-    except Exception:
+    except Exception as e:
+        print(f"Error en HF: {e}")
         return ""

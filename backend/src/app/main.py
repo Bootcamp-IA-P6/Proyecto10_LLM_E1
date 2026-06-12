@@ -150,7 +150,7 @@ def generate(request: GenerateRequest, db: Session = Depends(get_db)):
 
         # Usar image_router según la fuente seleccionada
         image_url = get_image_by_source(request.topic, request.image_source)
-
+        
         save_generation(
             db=db,
             platform=request.platform,
