@@ -81,6 +81,9 @@ def client():
 
         app.dependency_overrides.clear()
 
-    # Limpiar fichero temporal
+# Al final del fixture, reemplaza el os.remove por:
+try:
     if os.path.exists(TEST_DB_FILE):
         os.remove(TEST_DB_FILE)
+except PermissionError:
+    pass  # Windows puede tener el fichero bloqueado
