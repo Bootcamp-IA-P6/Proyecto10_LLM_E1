@@ -5,3 +5,9 @@ __pycache__
 .env
 .git
 data/
+.pytest_cache
+.coverage
+htmlcov
+tests/
+.gitignore
+*.db
