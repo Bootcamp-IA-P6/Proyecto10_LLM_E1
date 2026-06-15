@@ -20,7 +20,7 @@ import {
   NewsRequest,
   NewsResponse,
   CompanyProfile,
-  AnyResult,
+  GenerateResponse,
 } from "@/types/content"
 
 type Tab = "general" | "science" | "news"
