@@ -1,12 +1,17 @@
-FROM node:20-alpine AS builder
+FROM oven/bun:1 AS builder
 WORKDIR /app
-COPY package*.json .
-RUN npm install
-COPY . .
-RUN npm run build
 
-FROM node:20-alpine
+COPY package.json bun.lock bunfig.toml ./
+RUN bun install --frozen-lockfile
+
+COPY . .
+RUN bun run build
+
+FROM oven/bun:1 AS runner
 WORKDIR /app
-COPY --from=builder /app/.next/standalone ./
+ENV NODE_ENV=production
+
+COPY --from=builder /app /app
+
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["bun", "run", "preview", "--host", "0.0.0.0", "--port", "3000"]
