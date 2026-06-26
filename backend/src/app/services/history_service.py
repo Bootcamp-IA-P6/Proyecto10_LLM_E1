@@ -13,6 +13,8 @@ def save_generation(
     language:   str = "es",
     image_url:  str = "",
     gen_type:   str = "general",
+    quality_score:    float = None,
+    quality_feedback: str  = None,
 ) -> Generation:
     """
     Guarda una generación en el historial.
@@ -27,6 +29,8 @@ def save_generation(
         content=content,
         image_url=image_url,
         gen_type=gen_type,
+        quality_score=quality_score,
+        quality_feedback=quality_feedback,
     )
     db.add(generation)
     db.commit()

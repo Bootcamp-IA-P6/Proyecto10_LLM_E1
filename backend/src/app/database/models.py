@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, Float
 from sqlalchemy.orm import declarative_base
 from datetime import datetime, timezone
 
@@ -17,5 +17,7 @@ class Generation(Base):
     model_used = Column(String(100), nullable=False)
     content    = Column(Text, nullable=False)
     image_url  = Column(String(500), nullable=True)
+    quality_score = Column(Float, nullable=True)
+    quality_feedback = Column(String(500), nullable=True)
     gen_type   = Column(String(50), nullable=False, default="general")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
